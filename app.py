@@ -3,53 +3,64 @@ from flask import Flask, request
 import requests
 import os
 
-TOKEN = "BU_YERGA_SENING_BOT_TOKENINGNI_QOY"
+TOKEN = os.environ.get("BOT_TOKEN")
 bot = telebot.TeleBot(TOKEN)
 server = Flask(__name__)
 
-def download_video(url):
+# --- Видео юклаб олиш функцияси ---
+def yuklab_ol(url):
     try:
-        api_url = f"https://ssyoutube.com/api/convert?url={url}"
-        response = requests.get(api_url)
-        data = response.json()
-        video_url = data["url"][0]["url"]
-        return video_url
+        # TikTok API (янги ишлайдиган манба)
+        api_url = f"https://api.tikmate.app/api/lookup?url={url}"
+        javob = requests.get(api_url).json()
+        if "video_url" in javob:
+            return javob["video_url"]
+        else:
+            return None
     except Exception as e:
         print("Xato:", e)
         return None
 
+# --- /start буйруғи ---
 @bot.message_handler(commands=['start'])
-def start(message):
-    bot.reply_to(message, "🎬 Salom! Menga TikTok yoki Instagram havolasini yuboring — video tayyor holda yuklab beraman.")
+def start(msg):
+    bot.reply_to(msg, "👋 Assalomu alaykum!\nMenga TikTok yoki Instagram havolasini yuboring — 🎬 video tayyor holda qaytib beraman.")
 
+# --- Асосий хабарни қабул қилиш ---
 @bot.message_handler(func=lambda message: True)
 def handle_message(message):
-    url = message.text.strip()
-    if "tiktok.com" in url or "instagram.com" in url:
-        bot.send_message(message.chat.id, "⏳ Yuklab olinmoqda, biroz kuting...")
-        video_link = download_video(url)
-        if video_link:
-            bot.send_message(message.chat.id, "🎬 Видео тайёр!")
-            bot.send_video(message.chat.id, video=video_link)
+    text = message.text.strip()
+
+    if "tiktok.com" in text or "instagram.com" in text:
+        bot.send_message(message.chat.id, "🔄 Видео тайёрланмоқда, бироз кутинг...")
+
+        video_url = yuklab_ol(text)
+        if video_url:
+            try:
+                bot.send_message(message.chat.id, "🎬 Видео тайёр!")
+                bot.send_video(message.chat.id, video_url)
+            except:
+                bot.send_message(message.chat.id, "⚠️ Видео юборишда хато юз берди.")
         else:
-            bot.send_message(message.chat.id, "❌ Видео юклаб бўлмади. Ҳаволани текширинг.")
+            bot.send_message(message.chat.id, "❌ Видео топилмади. Илтимос, ҳаволани қайта текширинг.")
     else:
-        bot.send_message(message.chat.id, "ℹ️ Илтимос, TikTok ёки Instagram ҳаволасини жўнатинг.")
+        bot.send_message(message.chat.id, "📎 Илтимос, фақат TikTok ёки Instagram ҳаволасини юборинг.")
 
-@server.route(f"/{TOKEN}", methods=["POST"])
-def getMessage():
-    json_str = request.get_data().decode("UTF-8")
-    update = telebot.types.Update.de_json(json_str)
-    bot.process_new_updates([update])
-    return "!", 200
-
-@server.route("/")
+# --- Webhook созламаси ---
+@server.route('/')
 def webhook():
     bot.remove_webhook()
     bot.set_webhook(url=f"https://tiktok-instagram-yuklovchi-new.onrender.com/{TOKEN}")
     return "Ishlamoqda!", 200
 
+@server.route(f'/{TOKEN}', methods=['POST'])
+def getMessage():
+    json_str = request.get_data().decode('UTF-8')
+    update = telebot.types.Update.de_json(json_str)
+    bot.process_new_updates([update])
+    return '', 200
+
+# --- Ишга тушириш ---
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
-
 
