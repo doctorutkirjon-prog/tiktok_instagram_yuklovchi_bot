@@ -46,10 +46,10 @@ def getMessage():
 @server.route("/")
 def webhook():
     bot.remove_webhook()
-   bot.set_webhook(url=f"https://tiktok-instagram-yuklovchi-new.onrender.com/{TOKEN}")
-
+    bot.set_webhook(url=f"https://tiktok-instagram-yuklovchi-new.onrender.com/{TOKEN}")
     return "Ishlamoqda!", 200
 
 if __name__ == "__main__":
     server.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
+
 
